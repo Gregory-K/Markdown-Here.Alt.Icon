@@ -5,9 +5,9 @@ This is a **fork** of [**markdown-here-revival**](https://gitlab.com/jfx2006/mar
 **Markdown-Here Alt.Icon** simply provides **alternative** main and formatting-toolbar **icons** more aligned with Thunderbird's icon design.
    
 Version:  
-**3.1.1.1**  
+**3.3.0.1**  
 Compatibility:  
-78.5.0 <= Thunderbird version
+78.5.0 <= Thunderbird version >= 102.0
 
 More on:  
 GitHub (main) - https://github.com/Gregory-K/Markdown-Here.Alt.Icon  

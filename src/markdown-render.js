@@ -13,75 +13,106 @@
  * That way, we minimize the amount of code that needs to be loaded in every page.
  */
 
-;(function() {
+import { marked } from "./vendor/marked.esm.js"
+import { mathBlock, mathInline } from "./marked-texzilla.js"
+import hljs from "./highlightjs/highlight.min.js"
 
-"use strict";
-/*global module:false*/
-
-var MarkdownRender = {};
-
+"use strict"
 
 /**
  Using the functionality provided by the functions htmlToText and markdownToHtml,
  render html into pretty text.
  */
-function markdownRender(mdText, userprefs, marked, hljs) {
+export default function markdownRender(mdText, userprefs) {
   function mathify(mathcode) {
     return userprefs['math-value']
             .replace(/\{mathcode\}/ig, mathcode)
-            .replace(/\{urlmathcode\}/ig, encodeURIComponent(mathcode));
+            .replace(/\{urlmathcode\}/ig, encodeURIComponent(mathcode))
   }
 
   // Hook into some of Marked's renderer customizations
-  const markedRenderer = new marked.Renderer();
+  const markedRenderer = new marked.Renderer()
 
-  const defaultLinkRenderer = markedRenderer.link;
+  const defaultLinkRenderer = markedRenderer.link
   markedRenderer.link = function(href, title, text) {
     // Added to fix MDH issue #57: MD links should automatically add scheme.
     // Note that the presence of a ':' is used to indicate a scheme, so port
     // numbers will defeat this.
-    href = href.replace(/^(?!#)([^:]+)$/, 'http://$1');
+    href = href.replace(/^(?!#)([^:]+)$/, 'http://$1')
 
-    return defaultLinkRenderer.call(this, href, title, text);
-  };
-
-  function mathsExpression(expr) {
-    if (userprefs['math-enabled']) {
-      if (expr.match(/^\$\$[\s\S]*\$\$$/)) {
-        expr = expr.substr(2, expr.length - 4);
-        const math_rendered = mathify(expr);
-        return `
-                <div style="display:block;text-align:center;">
-                  ${math_rendered}
-                </div>`;
-      } else if (expr.match(/^\$[\s\S]*\$$/)) {
-        expr = expr.substr(1, expr.length - 2);
-        return mathify(expr);
-      }
-    } else {
-      return false;
-    }
+    return defaultLinkRenderer.call(this, href, title, text)
   }
 
-  const defaultCodeRenderer = markedRenderer.code;
-  markedRenderer.code = function(code, lang, escaped) {
+  function mathsExpression(expr) {
+    if (expr.match(/^\$\$[\s\S]*\$\$$/)) {
+      expr = expr.substr(2, expr.length - 4)
+      const math_rendered = mathify(expr)
+      return `
+              <div style="display:block;text-align:center;">
+                ${math_rendered}
+              </div>`
+    } else if (expr.match(/^\$[\s\S]*\$$/)) {
+      expr = expr.substr(1, expr.length - 2)
+      return mathify(expr)
+    }
+    return false
+  }
+
+  const defaultCodeRenderer = markedRenderer.code
+  const gchartCodeRenderer = function(code, lang, escaped) {
     if (!lang) {
-      const math = mathsExpression(code);
+      const math = mathsExpression(code)
       if (math) {
-        return math;
+        return math
       }
     }
-    return defaultCodeRenderer.call(this, code, lang, escaped);
-  };
-
-  const defaultCodespanRenderer = markedRenderer.codespan;
-  markedRenderer.codespan = function(text) {
-    const math = mathsExpression(text);
-    if (math) {
-      return math;
+    if (code.startsWith("\n")) {
+      code = code.trimStart()
     }
-    return defaultCodespanRenderer.call(this, text);
-  };
+    return defaultCodeRenderer.call(this, code, lang, escaped)
+  }
+
+  const defaultCodespanRenderer = markedRenderer.codespan
+  const gchartCodespanRenderer = function(text) {
+    const math = mathsExpression(text)
+    if (math) {
+      return math
+    }
+    return defaultCodespanRenderer.call(this, text)
+  }
+
+  function smartarrows(text) {
+    return text
+      .replace(/<-->/g, "\u2194")
+      .replace(/<--/g, "\u2190")
+      .replace(/-->/g, "\u2192")
+      .replace(/<==>/g, "\u21d4")
+      .replace(/<==/g, "\u21d0")
+      .replace(/==>/g, "\u21d2")
+  }
+
+  const tokenizer = {
+    inlineText(src, smartypants) {
+      const cap = this.rules.inline.text.exec(src)
+      if (cap) {
+        let text
+        if (this.lexer.state.inRawBlock) {
+          text = this.options.sanitize
+            ? this.options.sanitizer
+              ? this.options.sanitizer(cap[0])
+              : escape(cap[0])
+            : cap[0]
+        } else {
+          text = this.options.smartypants ? smartypants(smartarrows(cap[0])) : cap[0]
+        }
+        return {
+          type: "text",
+          raw: cap[0],
+          text,
+        }
+      }
+    },
+  }
 
   const markedOptions = {
     renderer: markedRenderer,
@@ -90,40 +121,28 @@ function markdownRender(mdText, userprefs, marked, hljs) {
     sanitize: false,
     tables: true,
     smartLists: true,
-    breaks: userprefs['gfm-line-breaks-enabled'],
-    smartypants: true,
+    breaks: userprefs["gfm-line-breaks-enabled"],
+    smartypants: userprefs["smart-replacements-enabled"],
     // Bit of a hack: highlight.js uses a `hljs` class to style the code block,
     // so we'll add it by sneaking it into this config field.
-    langPrefix: 'hljs language-',
-    highlight: function(codeText, codeLanguage) {
-        if (codeLanguage &&
-            hljs.getLanguage(codeLanguage.toLowerCase())) {
-          return hljs.highlight(codeLanguage.toLowerCase(), codeText).value;
-        }
-
-        return codeText;
+    langPrefix: "hljs language-",
+    highlight: function (codeText, codeLanguage) {
+      if (codeLanguage && hljs.getLanguage(codeLanguage.toLowerCase())) {
+        return hljs.highlight(codeText, {
+          language: codeLanguage.toLowerCase(),
+        }).value
       }
-    };
+      return codeText
+    },
+  }
 
-  const renderedMarkdown = marked(mdText, markedOptions);
-
-  return renderedMarkdown;
+  marked.setOptions(markedOptions)
+  marked.use({tokenizer})
+  if (userprefs["math-renderer"] === "gchart") {
+    markedRenderer.code = gchartCodeRenderer
+    markedRenderer.codespan = gchartCodespanRenderer
+  } else if (userprefs["math-renderer"] === "texzilla") {
+    marked.use({extensions: [mathBlock, mathInline]})
+  }
+  return marked(mdText)
 }
-
-
-// Expose these functions
-
-MarkdownRender.markdownRender = markdownRender;
-
-var EXPORTED_SYMBOLS = ['MarkdownRender'];
-
-if (typeof module !== 'undefined') {
-  module.exports = MarkdownRender;
-} else {
-  this.MarkdownRender = MarkdownRender;
-  this.EXPORTED_SYMBOLS = EXPORTED_SYMBOLS;
-}
-
-}).call(function() {
-  return this || (typeof window !== 'undefined' ? window : global);
-}());
