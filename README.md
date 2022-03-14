@@ -11,9 +11,9 @@ GitHub (main) - https://github.com/Gregory-K/Markdown-Here.Alt.Icon
 GitLab (alt.) - https://gitlab.com/Gregory.K/Markdown-Here.Alt.Icon
 
 Version:  
-**3.1.1.1**  
+**3.3.0.1**  
 Compatibility:  
-78.5.0 <= Thunderbird version
+78.5.0 <= Thunderbird version >= 102.0
 
 
 ## Install / Update
