@@ -1,14 +1,14 @@
 {
   "manifest_version": 2,
   "name": "__MSG_app_name__ Alt.Icon",
-  "version": "3.3.1.1",
+  "version": "3.4.0.1",
   "description": "__MSG_app_slogan__ -- An alternative icon version/fork (**CAUTION**: visit 'Homepage' bellow). --",
   "homepage_url": "https://github.com/Gregory-K/Markdown-Here.Alt.Icon",
   "applications": {
     "gecko": {
       "id": "markdown-here-revival@xul.calypsoblue.org",
-      "strict_min_version": "78.5.0",
-      "strict_max_version": "102.0"
+      "strict_min_version": "91.0",
+      "strict_max_version": "102.*"
     }
   },
   "default_locale": "en",
