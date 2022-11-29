@@ -109,11 +109,11 @@ messenger.runtime.onMessage.addListener(function(request, sender, responseCallba
       })
       messenger.composeAction.setIcon({
         path: {
-          "16": Utils.getLocalURL('/images/md_bw.svg'),
-          "19": Utils.getLocalURL('/images/md_bw.svg'),
-          "32": Utils.getLocalURL('/images/md_fucsia.svg'),
-          "38": Utils.getLocalURL('/images/md_fucsia.svg'),
-          "64": Utils.getLocalURL('/images/md_fucsia.svg')
+          "16": messenger.runtime.getURL('/images/md_bw.svg'),
+          "19": messenger.runtime.getURL('/images/md_bw.svg'),
+          "32": messenger.runtime.getURL('/images/md_fucsia.svg'),
+          "38": messenger.runtime.getURL('/images/md_fucsia.svg'),
+          "64": messenger.runtime.getURL('/images/md_fucsia.svg')
         },
         tabId: sender.tab.id
       })
@@ -128,11 +128,11 @@ messenger.runtime.onMessage.addListener(function(request, sender, responseCallba
       })
       messenger.composeAction.setIcon({
         path: {
-          "16": Utils.getLocalURL('/images/md_trnsp.svg'),
-          "19": Utils.getLocalURL('/images/md_trnsp.svg'),
-          "32": Utils.getLocalURL('/images/md_trnsp.svg'),
-          "38": Utils.getLocalURL('/images/md_trnsp.svg'),
-          "64": Utils.getLocalURL('/images/md_trnsp.svg')
+          "16": messenger.runtime.getURL('/images/md_trnsp.svg'),
+          "19": messenger.runtime.getURL('/images/md_trnsp.svg'),
+          "32": messenger.runtime.getURL('/images/md_trnsp.svg'),
+          "38": messenger.runtime.getURL('/images/md_trnsp.svg'),
+          "64": messenger.runtime.getURL('/images/md_trnsp.svg')
         },
         tabId: sender.tab.id
       })
