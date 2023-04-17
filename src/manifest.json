@@ -6,7 +6,7 @@
   "homepage_url": "https://github.com/Gregory-K/Markdown-Here.Alt.Icon",
   "applications": {
     "gecko": {
-      "id": "markdown-here-revival@xul.calypsoblue.org",
+      "id": "markdown-here-revival@xul.calypsoblue.org.alt.icon",
       "strict_min_version": "91.0",
       "strict_max_version": "113.0"
     }
