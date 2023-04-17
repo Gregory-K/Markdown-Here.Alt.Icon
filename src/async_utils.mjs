@@ -1,5 +1,5 @@
 /*
- * Copyright JFX 2021
+ * Copyright JFX 2021-2023
  * MIT License
  */
 
@@ -37,6 +37,12 @@ export async function getHljsStylesheet(syntax_css) {
   return fetchExtFile(await getHljsStylesheetURL(syntax_css))
 }
 
+const EMOJI_SHORTCODES = "/data/emoji_codes.json"
+
+export async function getEmojiShortcodes() {
+  return fetchExtFile(EMOJI_SHORTCODES, true)
+}
+
 // Copied from https://developer.mozilla.org/en-US/docs/Web/API/SubtleCrypto/digest
 export async function sha256Digest(text) {
   const msgUint8 = new TextEncoder().encode(text)
@@ -56,4 +62,13 @@ export async function getLanguage() {
     }
   }
   return "en"
+}
+
+export function getMessage(messageID, subs=null) {
+  let message = messenger.i18n.getMessage(messageID, subs)
+  if (!message) {
+    console.error('Could not find message ID: ' + messageID)
+    return null
+  }
+  return message
 }

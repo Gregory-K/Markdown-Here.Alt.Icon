@@ -4,29 +4,27 @@
  * MIT License
  */
 
-"use strict"
-/*global messenger:false, Utils:false, CommonLogic:false */
+/*global messenger:false */
 
 /*
  * Mail Extension background script.
  */
-import {getHljsStylesheet} from './async_utils.js'
+import { getHljsStylesheet, getMessage } from "./async_utils.mjs"
 import OptionsStore from "./options/options-storage.js"
 import markdownRender from "./markdown-render.js"
 
 messenger.runtime.onInstalled.addListener(async (details) => {
   console.log(`onInstalled running... ${details.reason}`)
-  const APP_NAME = Utils.getMessage("app_name")
+  const APP_NAME = getMessage("app_name")
   function updateCallback(winId, url) {
-    const message = Utils.getMessage("upgrade_notification_text", APP_NAME)
-    openNotification(winId,
-      message,
-      messenger.notificationbar.PRIORITY_INFO_MEDIUM,
-      [Utils.getMessage("update_notes_button"), Utils.getMessage("cancel_button")]
-    ).then(rv => {
+    const message = getMessage("upgrade_notification_text", APP_NAME)
+    openNotification(winId, message, messenger.notificationbar.PRIORITY_INFO_MEDIUM, [
+      getMessage("update_notes_button"),
+      getMessage("cancel_button"),
+    ]).then((rv) => {
       if (rv === "ok") {
         messenger.tabs.create({
-          "url": url.href,
+          url: url.href,
           windowId: winId,
         })
       }
@@ -35,7 +33,7 @@ messenger.runtime.onInstalled.addListener(async (details) => {
 
   function installCallback(winId, url) {
     messenger.tabs.create({
-      "url": url.href,
+      url: url.href,
       windowId: winId,
     })
   }
@@ -43,169 +41,149 @@ messenger.runtime.onInstalled.addListener(async (details) => {
   const win = await messenger.windows.getCurrent()
   const winId = win.id
   let onboardUrl = new URL(messenger.runtime.getURL("/options/options.html"))
-  let callback
 
   switch (details.reason) {
     case "install":
       onboardUrl.hash = "#docs"
-      callback = installCallback
+      installCallback(winId, onboardUrl)
       break
     case "update":
       onboardUrl.searchParams.set("previousVersion", details.previousVersion)
-      callback = updateCallback
+      onboardUrl.hash = "#about"
+      updateCallback(winId, onboardUrl)
       break
   }
-
-  // Forces migrations to run if needed
-  let last_version = await OptionsStore.get("last-version")
-  callback(winId, onboardUrl)
 })
-
 
 // Handle rendering requests from the content script.
 // See the comment in markdown-render.js for why we do this.
-messenger.runtime.onMessage.addListener(function(request, sender, responseCallback) {
+messenger.runtime.onMessage.addListener(function (request, sender, responseCallback) {
   // The content script can load in a not-real tab (like the search box), which
   // has an invalid `sender.tab` value. We should just ignore these pages.
-  if (typeof (sender.tab) === 'undefined' ||
-    typeof (sender.tab.id) === 'undefined' || sender.tab.id < 0) {
+  if (
+    typeof sender.tab === "undefined" ||
+    typeof sender.tab.id === "undefined" ||
+    sender.tab.id < 0
+  ) {
     return false
   }
   if (!request.action && request.popupCloseMode) {
     return false
   }
 
-  if (request.action === 'render') {
+  if (request.action === "render") {
     OptionsStore.getAll()
-      .then(prefs => {
-        getHljsStylesheet(`${prefs["syntax-css"]}`)
-          .then(syntaxCSS => {
-            responseCallback({
-              html: markdownRender(
-                request.mdText,
-                prefs),
-              css: (prefs['main-css'] + syntaxCSS)
-            })
-            return true
+      .then((prefs) => {
+        getHljsStylesheet(`${prefs["syntax-css"]}`).then((syntaxCSS) => {
+          responseCallback({
+            html: markdownRender(request.mdText, prefs),
+            css: prefs["main-css"] + syntaxCSS,
           })
-      }).catch(e => {
-      throw(e)
-    })
+          return true
+        })
+      })
+      .catch((e) => {
+        throw e
+      })
     return true
-  }
-  else if (request.action === 'get-options') {
-    OptionsStore.getAll().then(prefs => {
+  } else if (request.action === "get-options") {
+    OptionsStore.getAll().then((prefs) => {
       responseCallback(prefs)
     })
     return true
-  }
-  else if (request.action === 'show-toggle-button') {
+  } else if (request.action === "show-toggle-button") {
     if (request.show) {
       messenger.composeAction.enable(sender.tab.id)
-      messenger.menus.update("mdhr_toggle_context_menu", {enabled: true})
+      messenger.menus.update("mdhr_toggle_context_menu", { enabled: true })
       messenger.composeAction.setTitle({
-        title: Utils.getMessage("toggle_button_tooltip"),
-        tabId: sender.tab.id
+        title: getMessage("toggle_button_tooltip"),
+        tabId: sender.tab.id,
       })
       messenger.composeAction.setIcon({
         path: {
-          "16": messenger.runtime.getURL('/images/md_bw.svg'),
-          "19": messenger.runtime.getURL('/images/md_bw.svg'),
-          "32": messenger.runtime.getURL('/images/md_fucsia.svg'),
-          "38": messenger.runtime.getURL('/images/md_fucsia.svg'),
-          "64": messenger.runtime.getURL('/images/md_fucsia.svg')
+          16: messenger.runtime.getURL('/images/md_bw.svg'),
+          19: messenger.runtime.getURL('/images/md_bw.svg'),
+          32: messenger.runtime.getURL('/images/md_fucsia.svg'),
+          38: messenger.runtime.getURL('/images/md_fucsia.svg'),
+          64: messenger.runtime.getURL('/images/md_fucsia.svg'),
         },
-        tabId: sender.tab.id
+        tabId: sender.tab.id,
       })
       return false
-    }
-    else {
+    } else {
       messenger.composeAction.disable(sender.tab.id)
-      messenger.menus.update("mdhr_toggle_context_menu", {enabled: false})
+      messenger.menus.update("mdhr_toggle_context_menu", { enabled: false })
       messenger.composeAction.setTitle({
-        title: Utils.getMessage("toggle_button_tooltip_disabled"),
-        tabId: sender.tab.id
+        title: getMessage("toggle_button_tooltip_disabled"),
+        tabId: sender.tab.id,
       })
       messenger.composeAction.setIcon({
         path: {
-          "16": messenger.runtime.getURL('/images/md_trnsp.svg'),
-          "19": messenger.runtime.getURL('/images/md_trnsp.svg'),
-          "32": messenger.runtime.getURL('/images/md_trnsp.svg'),
-          "38": messenger.runtime.getURL('/images/md_trnsp.svg'),
-          "64": messenger.runtime.getURL('/images/md_trnsp.svg')
+          16: messenger.runtime.getURL('/images/md_trnsp.svg'),
+          19: messenger.runtime.getURL('/images/md_trnsp.svg'),
+          32: messenger.runtime.getURL('/images/md_trnsp.svg'),
+          38: messenger.runtime.getURL('/images/md_trnsp.svg'),
+          64: messenger.runtime.getURL('/images/md_trnsp.svg'),
         },
-        tabId: sender.tab.id
+        tabId: sender.tab.id,
       })
       return false
     }
-  }
-  else if (request.action === 'open-tab') {
+  } else if (request.action === "open-tab") {
     messenger.tabs.create({
-      'url': request.url
+      url: request.url,
     })
     return false
-  }
-  else if (request.action === 'get-unrender-markdown-warning') {
-    return openNotification(sender.tab.windowId,
-      Utils.getMessage("unrendering_modified_markdown_warning"),
+  } else if (request.action === "get-unrender-markdown-warning") {
+    return openNotification(
+      sender.tab.windowId,
+      getMessage("unrendering_modified_markdown_warning"),
       messenger.notificationbar.PRIORITY_CRITICAL_HIGH,
-      [Utils.getMessage("unrender_button"), Utils.getMessage("cancel_button")]
+      [getMessage("unrender_button"), getMessage("cancel_button")]
     )
-  }
-  else if (request.action === 'test-request') {
-    responseCallback('test-request-good')
+  } else if (request.action === "test-request") {
+    responseCallback("test-request-good")
     return false
-  }
-  else if (request.action === "test-bg-request") {
+  } else if (request.action === "test-bg-request") {
     if (request.argument) {
-      return Promise.resolve(["test-bg-request",
-        "test-bg-request-ok",
-        request.argument])
+      return Promise.resolve(["test-bg-request", "test-bg-request-ok", request.argument])
     }
-    return Promise.resolve([
-      "test-bg-request",
-      "test-bg-request-ok"])
-  }
-  else if (request.action === 'update-hotkey') {
-    return messenger.commands.update({
-      "name": "toggle-markdown",
-      "shortcut": request.hotkey_value,
-    }).then(() => {
-      updateActionTooltip()
-    })
-  }
-  else if (request.action === "compose-ready") {
+    return Promise.resolve(["test-bg-request", "test-bg-request-ok"])
+  } else if (request.action === "update-hotkey") {
+    return messenger.commands
+      .update({
+        name: "toggle-markdown",
+        shortcut: request.hotkey_value,
+      })
+      .then(() => {
+        updateActionTooltip()
+      })
+  } else if (request.action === "compose-ready") {
     return onComposeReady(sender.tab)
+  } else {
+    console.log("unmatched request action", request.action)
+    throw "unmatched request action: " + request.action
   }
-  else {
-    console.log('unmatched request action', request.action)
-    throw 'unmatched request action: ' + request.action
-  }
-})
-
-// Defining a onDismissed listener
-messenger.notificationbar.onDismissed.addListener((windowId, notificationId) => {
-  console.log(`notification ${notificationId} in window ${windowId} was dismissed`)
 })
 
 // Add the composeAction (the button in the format toolbar) listener.
-messenger.composeAction.onClicked.addListener(tab => {
+messenger.composeAction.onClicked.addListener((tab) => {
   return composeRender(tab.id)
 })
 
 // Mail Extensions are not able to add composeScripts via manifest.json,
 // they must be added via the API.
 messenger.composeScripts.register({
-  "js": [
+  js: [
     { file: "utils.js" },
     { file: "jsHtmlToText.js" },
     { file: "mdh-html-to-text.js" },
     { file: "markdown-here.js" },
-    { file: "composescript.js" }
-  ]
+    { file: "composescript.js" },
+  ],
 })
 
-messenger.commands.onCommand.addListener(async function(command) {
+messenger.commands.onCommand.addListener(async function (command) {
   if (command === "toggle-markdown") {
     let wins = await messenger.windows.getAll({ populate: true, windowTypes: ["messageCompose"] })
     for (const win of wins) {
@@ -217,7 +195,7 @@ messenger.commands.onCommand.addListener(async function(command) {
   }
 })
 
-messenger.compose.onBeforeSend.addListener(async function(tab, details) {
+messenger.compose.onBeforeSend.addListener(async function (tab, details) {
   let rv
   // If this is a plain text message, do not check for markdown-like content
   if (details.isPlainText) {
@@ -228,28 +206,23 @@ messenger.compose.onBeforeSend.addListener(async function(tab, details) {
     return Promise.resolve({})
   }
 
-  let isMarkdown = await messenger.tabs.sendMessage(
-    tab.id, { action: "check-forgot-render" })
+  let isMarkdown = await messenger.tabs.sendMessage(tab.id, { action: "check-forgot-render" })
   if (isMarkdown) {
-    const message = `${Utils.getMessage("forgot_to_render_prompt_info")}
-        ${Utils.getMessage("forgot_to_render_prompt_question")}`
+    const message = `${getMessage("forgot_to_render_prompt_info")}
+        ${getMessage("forgot_to_render_prompt_question")}`
 
-    rv = await openNotification(tab.windowId,
+    rv = await openNotification(
+      tab.windowId,
       message,
       messenger.notificationbar.PRIORITY_CRITICAL_HIGH,
-      [
-        Utils.getMessage("forgot_to_render_send_button"),
-        Utils.getMessage("forgot_to_render_back_button")
-      ]
+      [getMessage("forgot_to_render_send_button"), getMessage("forgot_to_render_back_button")]
     )
-  }
-  else {
+  } else {
     rv = "ok"
   }
   if (rv === "ok") {
     return Promise.resolve({})
-  }
-  else {
+  } else {
     return Promise.resolve({ cancel: true })
   }
 })
@@ -261,12 +234,12 @@ async function composeRender(tabId) {
   if (composeDetails.isPlainText) {
     return
   }
-  messenger.tabs.sendMessage(tabId, { action: 'toggle-markdown', })
+  messenger.tabs.sendMessage(tabId, { action: "toggle-markdown" })
 }
 
 async function openNotification(windowId, message, priority, button_labels) {
   async function notificationClose(notificationId) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       let notificationResponse = "cancel"
 
       // Defining a onClosed listener
@@ -287,6 +260,7 @@ async function openNotification(windowId, message, priority, button_labels) {
         }
       }
 
+      messenger.notificationbar.onDismissed.addListener(onClosedListener)
       messenger.notificationbar.onClosed.addListener(onClosedListener)
       messenger.notificationbar.onButtonClicked.addListener(onButtonClickListener)
     })
@@ -299,12 +273,12 @@ async function openNotification(windowId, message, priority, button_labels) {
     buttons: [
       {
         id: "btn-ok",
-        label: button_labels[0]
+        label: button_labels[0],
       },
       {
         id: "btn-cancel",
-        label: button_labels[1]
-      }
+        label: button_labels[1],
+      },
     ],
     placement: "bottom",
   })
@@ -312,9 +286,9 @@ async function openNotification(windowId, message, priority, button_labels) {
 }
 
 function forgotToRenderEnabled() {
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     let rv = false
-    OptionsStore.getAll().then(prefs => {
+    OptionsStore.getAll().then((prefs) => {
       rv = prefs["forgot-to-render-check-enabled"]
       resolve(rv)
     })
@@ -324,7 +298,7 @@ function forgotToRenderEnabled() {
 // Show the shortcut hotkey on the ComposeAction button
 async function updateActionTooltip() {
   const hotkey = await OptionsStore.get("hotkey-input")
-  const msg = Utils.getMessage("toggle_button_tooltip")
+  const msg = getMessage("toggle_button_tooltip")
   await messenger.composeAction.setTitle({ title: `${msg}\n${hotkey["hotkey-input"]}` })
 }
 updateActionTooltip()
@@ -333,24 +307,28 @@ updateActionTooltip()
 async function createContextMenu() {
   let menuId = await messenger.menus.create({
     id: "mdhr_toggle_context_menu",
-    title: Utils.getMessage("context_menu_item"),
+    title: getMessage("context_menu_item"),
     contexts: ["page", "selection"],
     icons: {
-      "16": "images/md_trnsp.svg",
+      16: "images/md_trnsp.svg",
     },
     visible: false,
     enabled: true,
   })
   messenger.menus.onShown.addListener((info, tab) => {
     if (tab.type === "messageCompose") {
-      messenger.menus.update(menuId, {visible: true})
-      messenger.menus.refresh()
+      messenger.compose.getComposeDetails(tab.id).then((details) => {
+        if (!details.isPlainText) {
+          messenger.menus.update(menuId, { visible: true })
+          messenger.menus.refresh()
+        }
+      })
     }
   })
   messenger.menus.onHidden.addListener((info, tab) => {
-    messenger.menus.update(menuId, {visible: false})
+    messenger.menus.update(menuId, { visible: false })
     messenger.menus.refresh()
-   })
+  })
   messenger.menus.onClicked.addListener((info, tab) => {
     return composeRender(tab.id)
   })
@@ -363,6 +341,6 @@ async function onComposeReady(tab) {
     let identityId = composeDetails.identityId
     let replyPosition = await messenger.reply_prefs.getReplyPosition(identityId)
     let useParagraph = await messenger.reply_prefs.getUseParagraph()
-    return {reply_position: replyPosition, use_paragraph: useParagraph}
+    return { reply_position: replyPosition, use_paragraph: useParagraph }
   }
 }

@@ -1,3 +1,7 @@
+#### v3.4.5
+* Add emoji shortcode (Github style) support
+  eg. `:smiley:` becomes 😃
+
 #### v3.4.3
 * Don't run onInstalled callback for unnecessary reasons
 * Fix excluded content having random spaces and other things disappearing
@@ -5,6 +9,11 @@
 * Do not store hljs stylesheets file list in extension storage.
   [#49](https://gitlab.com/jfx2006/markdown-here-revival/-/issues/49)
 * Make options page #hash links go to right page on load.
+* Don't check forwarded messages for unrendered Markdown; Don't render forwarded
+  content either. [#53](https://gitlab.com/jfx2006/markdown-here-revival/-/issues/53)
+* Fix dismiss button (x) in forgot-to-render notification bar.
+  [#52](https://gitlab.com/jfx2006/markdown-here-revival/-/issues/52)
+* Update DOMPurify and Markedjs vendored libs.
 
 #### v3.4.2
 * Update markedjs and DOMPurify

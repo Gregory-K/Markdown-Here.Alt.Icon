@@ -101,14 +101,14 @@
                 <ul>
                   <li class="my-md-2">
                     <a href="https://gitlab.com/jfx2006/markdown-here-revival/-/wikis/Markdown-Here-Revival-Cheatsheet"
-                       target="_blank" data-i18n="resources_cheatsheet_link">Markdown Here Revival Cheatsheet</a>
+                       data-i18n="resources_cheatsheet_link">Markdown Here Revival Cheatsheet</a>
                   </li>
                   <li class="my-md-2">
-                    <a href="https://gitlab.com/jfx2006/markdown-here-revival/-/wikis/Home" target="_blank" data-i18n="mdhr_wiki">
+                    <a href="https://gitlab.com/jfx2006/markdown-here-revival/-/wikis/Home" data-i18n="mdhr_wiki">
                     Markdown Here Revival wiki</a>
                   </li>
                   <li class="my-md-2">
-                    <a href="https://gitlab.com/jfx2006/markdown-here-revival/-/wikis/Tips-and-Tricks" target="_blank" data-i18n="tips_tricks_link">
+                    <a href="https://gitlab.com/jfx2006/markdown-here-revival/-/wikis/Tips-and-Tricks" data-i18n="tips_tricks_link">
                       Tips and Tricks</a>
                   </li>
                 </ul>
@@ -155,6 +155,13 @@
                     <input id="smart-replacements" class="form-check-input" type="checkbox" name="smart-replacements-enabled"/>
                     <label class="form-check-label" for="smart-replacements" data-i18n="smart_replacements_enabled_label">Enable "smart" replacements</label>
                     <div class="text-muted" data-i18n="smart_replacements_2"></div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <div class="form-check">
+                    <input id="emoji-shortcode" class="form-check-input" type="checkbox" name="emoji-shortcode-enabled"/>
+                    <label class="form-check-label" for="emoji-shortcode" data-i18n="emoji_shortcode_enabled_label">Enable :emoji: (Github style) Shortcodes</label>
+                    <!-- <div class="text-muted" data-i18n="smart_replacements_2"></div> -->
                   </div>
                 </div>
               </div>
@@ -341,8 +348,8 @@
               </div>
               <div class="card-body">
                 <p>
-                  <a target="_blank" href="https://gitlab.com/jfx2006/markdown-here-revival/-/issues">
-                    <span data-i18n="create_gitlab_issue">Create new issue on GitLab</span></a>
+                  <a href="https://gitlab.com/jfx2006/markdown-here-revival/-/issues" data-i18n="create_gitlab_issue">
+                    Create new issue on GitLab</a>
                   <br><span data-i18n="issue_debug_info">The following debug info can be used</span>:
                 </p>
                 <div>
@@ -356,7 +363,7 @@
                   <span class="fade">&#10004;</span>
                 </div>
                 <div>
-                  <a id="tests-link" href="../test/index.html">Run Tests</a>
+                  <a id="tests-link" href="../test/index.html" hidden="hidden">Run Tests</a>
                 </div>
               </div>
             </div>
