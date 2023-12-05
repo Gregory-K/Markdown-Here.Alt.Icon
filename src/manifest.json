@@ -1,14 +1,14 @@
 {
   "manifest_version": 2,
-  "name": "__MSG_app_name__ Alt.Icon",
-  "version": "3.4.5.1",
+  "name": "__MSG_app_name__",
+  "version": "3.5.1.1",
   "description": "__MSG_app_slogan__ -- An alternative icon version/fork (**CAUTION**: visit 'Homepage' bellow). --",
   "homepage_url": "https://github.com/Gregory-K/Markdown-Here.Alt.Icon",
   "applications": {
     "gecko": {
       "id": "markdown-here-revival@xul.calypsoblue.org.alt.icon",
       "strict_min_version": "91.0",
-      "strict_max_version": "113.0"
+      "strict_max_version": "121.0"
     }
   },
   "default_locale": "en",
@@ -28,6 +28,7 @@
       "16": "images/md_bw.svg",
       "19": "images/md_bw.svg",
       "32": "images/md_fucsia.svg",
+      "38": "images/md_fucsia.svg",
       "64": "images/md_fucsia.svg"
     },
     "theme_icons": [
@@ -69,11 +70,11 @@
   },
   "experiment_apis": {
     "notificationbar": {
-      "schema": "experiments/notificationbar_schema.json",
+      "schema": "experiments/notificationbar/schema.json",
       "parent": {
         "scopes": ["addon_parent"],
         "paths": [["notificationbar"]],
-        "script": "experiments/notificationbar.js"
+        "script": "experiments/notificationbar/implementation.js"
       }
     },
     "reply_prefs": {

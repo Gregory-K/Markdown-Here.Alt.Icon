@@ -16,6 +16,8 @@ const OLD_CSS_SUMS = [
   "72706d3e07c403c35688760180a753552af05c4ed2d5d1906dbf89b5c649342a",
   // 3.3.1
   "67f46b9488904c869638c6f9fc2ea04d1046b5efa1115fec186a327c13a7ea96",
+  // 3.5.0
+  "807ddb7e46507d2a3b4e69614db057692a1dbc9e2af10d42848035020986c526",
 ]
 
 // Checksum of the current version of default.css
@@ -157,6 +159,15 @@ export async function migrate_smartReplacements(options, defaults) {
 export async function migrate_mathRenderer(options, defaults) {
   if (options["math-enabled"] === true) {
     return { "math-renderer": "gchart" }
+  }
+  return null
+}
+
+export async function migrate_macHotkeys(options, defaults) {
+  if (navigator.platform === "MacIntel") {
+    if (options["hotkey-input"] === "Ctrl+Alt+M") {
+      return { "hotkey-input": defaults["hotkey-input"] }
+    }
   }
   return null
 }

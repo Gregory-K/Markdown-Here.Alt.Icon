@@ -14,71 +14,30 @@
  */
 
 import { marked } from "./vendor/marked.esm.js"
-import { mathBlock, mathInline } from "./marked-texzilla.js"
+import { markedHighlight } from "/vendor/marked-highlight.esm.js"
 import hljs from "./highlightjs/highlight.min.js"
-import { markedEmoji } from "./marked-emoji.js"
-import emojis from "./data/shortcodes.mjs"
+import markedExtendedTables from "./vendor/marked-extended-tables.esm.js"
+import markedLinkifyIt from "./vendor/marked-linkify-it.esm.js"
 
-/**
- Using the functionality provided by the functions htmlToText and markdownToHtml,
- render html into pretty text.
- */
-export default function markdownRender(mdText, userprefs) {
-  function mathify(mathcode) {
-    return userprefs["math-value"]
-      .replace(/\{mathcode\}/gi, mathcode)
-      .replace(/\{urlmathcode\}/gi, encodeURIComponent(mathcode))
-  }
+import OptionsStore from "./options/options-storage.js"
 
-  // Hook into some of Marked's renderer customizations
-  const markedRenderer = new marked.Renderer()
+const defaultMarkedOptions = Object.assign({}, marked.getDefaults(), {
+  mangle: undefined,
+  headerIds: undefined,
+  headerPrefix: undefined,
+  smartypants: undefined,
+})
 
-  const defaultLinkRenderer = markedRenderer.link
-  markedRenderer.link = function (href, title, text) {
-    // Added to fix MDH issue #57: MD links should automatically add scheme.
-    // Note that the presence of a ':' is used to indicate a scheme, so port
-    // numbers will defeat this.
-    href = href.replace(/^(?!#)([^:]+)$/, "http://$1")
+export async function resetMarked(userprefs) {
+  marked.setOptions(defaultMarkedOptions)
 
-    return defaultLinkRenderer.call(this, href, title, text)
-  }
-
-  function mathsExpression(expr) {
-    if (expr.match(/^\$\$[\s\S]*\$\$$/)) {
-      expr = expr.substr(2, expr.length - 4)
-      const math_rendered = mathify(expr)
-      return `
-              <div style="display:block;text-align:center;">
-                ${math_rendered}
-              </div>`
-    } else if (expr.match(/^\$[\s\S]*\$$/)) {
-      expr = expr.substr(1, expr.length - 2)
-      return mathify(expr)
+  if (userprefs) {
+    userprefs = {
+      ...OptionsStore.defaults,
+      ...userprefs,
     }
-    return false
-  }
-
-  const defaultCodeRenderer = markedRenderer.code
-  const gchartCodeRenderer = function (code, lang, escaped) {
-    if (!lang) {
-      const math = mathsExpression(code)
-      if (math) {
-        return math
-      }
-    }
-    if (code.startsWith("\n")) {
-      code = code.trimStart()
-    }
-    return defaultCodeRenderer.call(this, code, lang, escaped)
-  }
-
-  const defaultCodespanRenderer = markedRenderer.codespan
-  const gchartCodespanRenderer = function (text) {
-    const math = mathsExpression(text)
-    if (math) {
-      return math
-    }
-    return defaultCodespanRenderer.call(this, text)
+  } else {
+    userprefs = await OptionsStore.getAll()
   }
 
   function smartarrows(text) {
@@ -97,11 +56,7 @@ export default function markdownRender(mdText, userprefs) {
       if (cap) {
         let text
         if (this.lexer.state.inRawBlock) {
-          text = this.options.sanitize
-            ? this.options.sanitizer
-              ? this.options.sanitizer(cap[0])
-              : escape(cap[0])
-            : cap[0]
+          text = cap[0]
         } else {
           text = this.options.smartypants ? smartypants(smartarrows(cap[0])) : cap[0]
         }
@@ -114,39 +69,63 @@ export default function markdownRender(mdText, userprefs) {
     },
   }
 
+  // Hook into some of Marked's renderer customizations
+  const markedRenderer = new marked.Renderer()
+
+  const defaultLinkRenderer = markedRenderer.link
+  markedRenderer.link = function (href, title, text) {
+    // Added to fix MDH issue #57: MD links should automatically add scheme.
+    // Note that the presence of a ':' is used to indicate a scheme, so port
+    // numbers will defeat this.
+    href = href.replace(/^(?!#)([^:]+)$/, "https://$1")
+
+    return defaultLinkRenderer.call(this, href, title, text)
+  }
+
   const markedOptions = {
     renderer: markedRenderer,
     gfm: true,
     pedantic: false,
-    sanitize: false,
-    tables: true,
-    smartLists: true,
     breaks: userprefs["gfm-line-breaks-enabled"],
-    smartypants: userprefs["smart-replacements-enabled"],
-    // Bit of a hack: highlight.js uses a `hljs` class to style the code block,
-    // so we'll add it by sneaking it into this config field.
-    langPrefix: "hljs language-",
-    highlight: function (codeText, codeLanguage) {
-      if (codeLanguage && hljs.getLanguage(codeLanguage.toLowerCase())) {
-        return hljs.highlight(codeText, {
-          language: codeLanguage.toLowerCase(),
-        }).value
-      }
-      return codeText
-    },
   }
 
   marked.setOptions(markedOptions)
-  marked.use({ tokenizer })
-  if (userprefs["math-renderer"] === "gchart") {
-    markedRenderer.code = gchartCodeRenderer
-    markedRenderer.codespan = gchartCodespanRenderer
-  } else if (userprefs["math-renderer"] === "texzilla") {
-    marked.use({ extensions: [mathBlock, mathInline] })
+  marked.use(markedExtendedTables())
+  marked.use(markedLinkifyIt({}, {}))
+  if (userprefs["smart-replacements-enabled"]) {
+    const { markedSmartypants } = await import("./vendor/marked-smartypants.esm.js")
+    marked.use(markedSmartypants())
+    marked.use({ tokenizer })
+  }
+  marked.use(
+    markedHighlight({
+      langPrefix: "hljs language-",
+      highlight(code, lang) {
+        const lowerLang = lang.toLowerCase()
+        const language = hljs.getLanguage(lowerLang) ? lowerLang : "plaintext"
+        return hljs.highlight(code, { language }).value
+      },
+    })
+  )
+  if (userprefs["math-renderer"] !== "disabled") {
+    const { markedMath } = await import("./marked-math.js")
+    const mathOptions = {
+      math_renderer: userprefs["math-renderer"],
+      math_url: userprefs["math-value"],
+    }
+    marked.use(markedMath(mathOptions))
   }
   if (userprefs["emoji-shortcode-enabled"]) {
+    const { markedEmoji } = await import("./vendor/marked-emoji.esm.js")
+    const { default: emojis } = await import("./data/shortcodes.mjs")
     marked.use(markedEmoji({ emojis, unicode: true }))
   }
+}
 
-  return marked(mdText)
+/**
+ Using the functionality provided by the functions htmlToText and markdownToHtml,
+ render html into pretty text.
+ */
+export async function markdownRender(mdText) {
+  return await marked.parse(mdText)
 }

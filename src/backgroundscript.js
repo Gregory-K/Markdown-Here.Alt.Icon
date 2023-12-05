@@ -11,7 +11,8 @@
  */
 import { getHljsStylesheet, getMessage } from "./async_utils.mjs"
 import OptionsStore from "./options/options-storage.js"
-import markdownRender from "./markdown-render.js"
+import { resetMarked, markdownRender } from "./markdown-render.js"
+import { getShortcutStruct } from "./options/shortcuts.js"
 
 messenger.runtime.onInstalled.addListener(async (details) => {
   console.log(`onInstalled running... ${details.reason}`)
@@ -53,6 +54,10 @@ messenger.runtime.onInstalled.addListener(async (details) => {
       updateCallback(winId, onboardUrl)
       break
   }
+  await messenger.tabs.create({
+    url: messenger.runtime.getURL("/mdh-revival.html"),
+    windowId: winId,
+  })
 })
 
 // Handle rendering requests from the content script.
@@ -72,20 +77,7 @@ messenger.runtime.onMessage.addListener(function (request, sender, responseCallb
   }
 
   if (request.action === "render") {
-    OptionsStore.getAll()
-      .then((prefs) => {
-        getHljsStylesheet(`${prefs["syntax-css"]}`).then((syntaxCSS) => {
-          responseCallback({
-            html: markdownRender(request.mdText, prefs),
-            css: prefs["main-css"] + syntaxCSS,
-          })
-          return true
-        })
-      })
-      .catch((e) => {
-        throw e
-      })
-    return true
+    return doRender(request.mdText)
   } else if (request.action === "get-options") {
     OptionsStore.getAll().then((prefs) => {
       responseCallback(prefs)
@@ -101,11 +93,11 @@ messenger.runtime.onMessage.addListener(function (request, sender, responseCallb
       })
       messenger.composeAction.setIcon({
         path: {
-          16: messenger.runtime.getURL('/images/md_bw.svg'),
-          19: messenger.runtime.getURL('/images/md_bw.svg'),
-          32: messenger.runtime.getURL('/images/md_fucsia.svg'),
-          38: messenger.runtime.getURL('/images/md_fucsia.svg'),
-          64: messenger.runtime.getURL('/images/md_fucsia.svg'),
+          16: messenger.runtime.getURL("/images/md_bw.svg"),
+          19: messenger.runtime.getURL("/images/md_bw.svg"),
+          32: messenger.runtime.getURL("/images/md_fucsia.svg"),
+          38: messenger.runtime.getURL("/images/md_fucsia.svg"),
+          64: messenger.runtime.getURL("/images/md_fucsia.svg"),
         },
         tabId: sender.tab.id,
       })
@@ -119,11 +111,11 @@ messenger.runtime.onMessage.addListener(function (request, sender, responseCallb
       })
       messenger.composeAction.setIcon({
         path: {
-          16: messenger.runtime.getURL('/images/md_trnsp.svg'),
-          19: messenger.runtime.getURL('/images/md_trnsp.svg'),
-          32: messenger.runtime.getURL('/images/md_trnsp.svg'),
-          38: messenger.runtime.getURL('/images/md_trnsp.svg'),
-          64: messenger.runtime.getURL('/images/md_trnsp.svg'),
+          16: messenger.runtime.getURL("/images/md_trnsp.svg"),
+          19: messenger.runtime.getURL("/images/md_trnsp.svg"),
+          32: messenger.runtime.getURL("/images/md_trnsp.svg"),
+          38: messenger.runtime.getURL("/images/md_trnsp.svg"),
+          64: messenger.runtime.getURL("/images/md_trnsp.svg"),
         },
         tabId: sender.tab.id,
       })
@@ -150,21 +142,35 @@ messenger.runtime.onMessage.addListener(function (request, sender, responseCallb
     }
     return Promise.resolve(["test-bg-request", "test-bg-request-ok"])
   } else if (request.action === "update-hotkey") {
-    return messenger.commands
-      .update({
-        name: "toggle-markdown",
-        shortcut: request.hotkey_value,
-      })
-      .then(() => {
-        updateActionTooltip()
-      })
+    return updateHotKey(request.hotkey_value, request.hotkey_tooltip)
   } else if (request.action === "compose-ready") {
     return onComposeReady(sender.tab)
+  } else if (request.action === "renderer-reset") {
+    return resetMarked()
   } else {
     console.log("unmatched request action", request.action)
     throw "unmatched request action: " + request.action
   }
 })
+
+await resetMarked()
+
+async function doRender(mdText) {
+  async function getSyntaxCSS() {
+    const syntax_css_name = await OptionsStore.get("syntax-css")
+    return await getHljsStylesheet(syntax_css_name["syntax-css"])
+  }
+  async function getMainCSS() {
+    const main_css = await OptionsStore.get("main-css")
+    return main_css["main-css"]
+  }
+  const syntax_css_p = getSyntaxCSS()
+  const main_css_p = getMainCSS()
+  const html_p = markdownRender(mdText)
+
+  const [main_css, syntax_css, html] = await Promise.all([main_css_p, syntax_css_p, html_p])
+  return { html, main_css, syntax_css }
+}
 
 // Add the composeAction (the button in the format toolbar) listener.
 messenger.composeAction.onClicked.addListener((tab) => {
@@ -295,13 +301,22 @@ function forgotToRenderEnabled() {
   })
 }
 
-// Show the shortcut hotkey on the ComposeAction button
-async function updateActionTooltip() {
-  const hotkey = await OptionsStore.get("hotkey-input")
+async function updateHotKey(hotkey_value, tooltip) {
+  await messenger.commands.update({
+    name: "toggle-markdown",
+    shortcut: hotkey_value,
+  })
   const msg = getMessage("toggle_button_tooltip")
-  await messenger.composeAction.setTitle({ title: `${msg}\n${hotkey["hotkey-input"]}` })
+  await messenger.composeAction.setTitle({ title: `${msg}\n${tooltip}` })
 }
-updateActionTooltip()
+OptionsStore.get("hotkey-input").then(async (result) => {
+  const shortkeyStruct = getShortcutStruct(result["hotkey-input"])
+  let tooltip = shortkeyStruct.shortcut
+  if (shortkeyStruct.macShortcut) {
+    tooltip = shortkeyStruct.macShortcut
+  }
+  await updateHotKey(shortkeyStruct.shortcut, tooltip)
+})
 
 // Context menu in compose window
 async function createContextMenu() {
@@ -310,7 +325,7 @@ async function createContextMenu() {
     title: getMessage("context_menu_item"),
     contexts: ["page", "selection"],
     icons: {
-      16: "images/md_trnsp.svg",
+      16: "images/md_bw.svg",
     },
     visible: false,
     enabled: true,

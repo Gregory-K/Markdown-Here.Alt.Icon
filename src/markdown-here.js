@@ -110,7 +110,7 @@ https://github.com/adam-p/markdown-here/issues/85
     // Only look for elements directly below <body> to avoid problems with
     // nested quotes
     for (let selector of [
-      "body > div.moz-signature",
+      "body > .moz-signature",
       "body > blockquote[type=cite]",
       "body > div.moz-cite-prefix",
       "body > div.moz-forward-container",
@@ -491,10 +491,6 @@ https://github.com/adam-p/markdown-here/issues/85
       // Some webmail (Gmail) strips off any external style block. So we need to go
       // through our styles, explicitly applying them to matching elements.
       makeStylesExplicit(wrapper, mdCss)
-
-      // marked-texzilla produces SVG images, which are not very email friendly,
-      // convert them to PNGs
-      Utils.convertMathSVGs(wrapper)
 
       // Monitor for changes to the content of the rendered MD. This will help us
       // prevent the user from silently losing changes later.

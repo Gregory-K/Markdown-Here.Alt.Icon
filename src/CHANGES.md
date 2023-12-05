@@ -1,3 +1,27 @@
+#### v3.5.1
+* Revert CSS changes that messed up reply and forwarded content
+* Add preview announcement for MDHR 4.0 beta
+
+#### v3.5.0.1
+* **Math rendering syntax unified!** If using the GChart math rendering, it's
+  no longer necessary to use backticks (\`) around the \$. 
+* GFM autolinking did not work with scheme://foo URLs with emoji support enabled
+  [#61](https://gitlab.com/jfx2006/markdown-here-revival/-/issues/61)
+* Changing Markdown options (such as enabling or disabling emojis) did not
+  take effect as expected. In the case of emojis, once enabled they could
+  not be disabled without restartihg Thunderbird.
+* Added Extended Table support
+
+
+#### v3.4.6
+* Not released on ATN
+* Fix detection of plain text signatures
+  [#57](https://gitlab.com/jfx2006/markdown-here-revival/-/issues/57)
+* Attempt to fix oversized and misaligned TeXZilla math images
+  [#58](https://gitlab.com/jfx2006/markdown-here-revival/-/issues/58)
+* macOS hotkey fixes
+  [#56](https://gitlab.com/jfx2006/markdown-here-revival/-/issues/56)
+
 #### v3.4.5
 * Add emoji shortcode (Github style) support
   eg. `:smiley:` becomes 😃

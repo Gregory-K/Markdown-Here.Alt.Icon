@@ -9,17 +9,10 @@
 
 /* global messenger:false, Utils:false bootstrap:false */
 
-import markdownRender from "../markdown-render.js"
 import HotkeyHandler from "./shortcuts.js"
 import DOMPurify from "../vendor/purify.es.js"
 
-import {
-  fetchExtFile,
-  getHljsStyles,
-  getHljsStylesheetURL,
-  getLanguage,
-  getMessage,
-} from "../async_utils.mjs"
+import { fetchExtFile, getHljsStyles, getLanguage, getMessage } from "../async_utils.mjs"
 import OptionsStore from "./options-storage.js"
 ;(async () => {
   // eslint-disable-next-line no-unused-vars
@@ -95,7 +88,14 @@ import OptionsStore from "./options-storage.js"
       await loadChangeList()
       await setInitialText()
       let rv = await OptionsStore.get("hotkey-input")
-      document.getElementById("hotkey-display-str").innerText = rv["hotkey-input"]
+      let displayShortcut = rv["hotkey-input"]
+      if (navigator.platform === "MacIntel") {
+        const shortcutStruct = hotkeyHandler.setMacShortcutDisplay(displayShortcut)
+        document.getElementById("hotkey-display-str").innerText = shortcutStruct.macShortcut
+        document.getElementById("hotkey-input").value = shortcutStruct.shortcut
+      } else {
+        document.getElementById("hotkey-display-str").innerText = displayShortcut
+      }
       if (document.location.hash === "#docs") {
         let e
         e = document.getElementById("options-tab")
@@ -122,11 +122,19 @@ import OptionsStore from "./options-storage.js"
     previewInput.addEventListener("scroll", setPreviewScroll, false)
 
     await OptionsStore.syncForm(form)
-    form.addEventListener("options-sync:form-synced", showSavedMsg)
-    form.addEventListener("options-sync:form-synced", handleMathRenderer)
+    form.addEventListener("options-sync:form-synced", onOptionsSaved)
 
     checkPreviewChanged()
     handleMathRenderer()
+  }
+
+  function onOptionsSaved(e) {
+    handleMathRenderer()
+    showSavedMsg()
+    Utils.makeRequestToBGScript("renderer-reset").then(() => {
+      inputDirty = true
+      checkPreviewChanged()
+    })
   }
 
   function activatePillNav() {
@@ -172,33 +180,26 @@ import OptionsStore from "./options-storage.js"
   }
 
   function checkPreviewChanged() {
-    OptionsStore.getAll()
-      .then((prefs) => {
-        if (inputDirty) {
-          getHljsStylesheetURL(prefs["syntax-css"])
-            .then((hljs_css_url) => {
-              previewIframe.contentDocument.getElementById("hljs_css").href = hljs_css_url
+    if (inputDirty) {
+      Utils.makeRequestToBGScript("render", { mdText: previewInput.value })
+        .then((response) => {
+          let style_elem = previewIframe.contentDocument.getElementById("main_css")
+          style_elem.appendChild(previewIframe.contentDocument.createTextNode(response.main_css))
 
-              let md_stylesheet = prefs["main-css"]
-              let style_elem = previewIframe.contentDocument.getElementById("md_css")
-              style_elem.innerText = md_stylesheet
+          style_elem = previewIframe.contentDocument.getElementById("syntax_css")
+          style_elem.appendChild(previewIframe.contentDocument.createTextNode(response.syntax_css))
 
-              let html = markdownRender(previewInput.value, prefs)
-              previewIframe.contentDocument.body.innerHTML = escapeHTML`${html}`
-              Utils.convertMathSVGs(previewIframe.contentDocument.body)
-
-              setPreviewScroll()
-
-              inputDirty = false
-            })
-            .catch((reason) => {
-              console.log(`Error getting hljs css. ${reason}`)
-            })
-        }
-      })
-      .finally(() => {
-        checkChangeTimeout = setTimeout(checkPreviewChanged, 100)
-      })
+          previewIframe.contentDocument.body.innerHTML = escapeHTML`${response.html}`
+          setPreviewScroll()
+        })
+        .catch((reason) => {
+          console.log(`Error rendering preview. ${reason}`)
+        })
+        .finally(() => {
+          checkChangeTimeout = setTimeout(checkPreviewChanged, 100)
+          inputDirty = false
+        })
+    }
   }
 
   async function setInitialText() {
@@ -209,7 +210,10 @@ import OptionsStore from "./options-storage.js"
   }
 
   function handleInput() {
-    inputDirty = true
+    if (!inputDirty) {
+      inputDirty = true
+      checkPreviewChanged()
+    }
   }
 
   async function onResetButtonClicked(event) {
@@ -231,16 +235,19 @@ import OptionsStore from "./options-storage.js"
   }
 
   async function loadChangeList() {
-    let changes = await fetchExtFile("/CHANGES.md")
-    let userprefs = await OptionsStore.getAll()
+    const changesElem = document.getElementById("mdhrChangeList")
+    const changes = await fetchExtFile("/CHANGES.md")
 
-    changes = markdownRender(changes, userprefs)
-
-    Utils.saferSetInnerHTML(document.getElementById("mdhrChangeList"), changes)
+    const response = await Utils.makeRequestToBGScript("render", { mdText: changes })
+    changesElem.innerHTML = escapeHTML`${response.html}`
   }
 
   async function handleHotKey(e) {
-    let newHotKey = e.detail.value()
+    const newHotKey = e.detail.value()
+    let displayHotKey = newHotKey
+    if (navigator.platform === "MacIntel") {
+      displayHotKey = e.detail.macHotKey()
+    }
     await OptionsStore.set({ "hotkey-input": newHotKey })
     Utils.makeRequestToBGScript("update-hotkey", { hotkey_value: newHotKey }).then(() => {
       form.dispatchEvent(
@@ -249,7 +256,7 @@ import OptionsStore from "./options-storage.js"
         })
       )
       showSavedMsg()
-      document.getElementById("hotkey-display-str").innerText = newHotKey
+      document.getElementById("hotkey-display-str").innerText = displayHotKey
     })
   }
 

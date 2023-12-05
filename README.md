@@ -3,7 +3,7 @@
 This is a **fork** of [**markdown-here-revival**](https://gitlab.com/jfx2006/markdown-here-revival), a [Thunderbird](https://www.thunderbird.net/) markdown renderer and syntax highlighter.
 
 **Markdown-Here Alt.Icon** simply provides **alternative** main and formatting-toolbar **icons** more aligned with Thunderbird's icon design.
-   
+
 <span align="left">![Markdown-Here icons](./icons/preview.png)</span>
 
 Homepage:  
@@ -11,9 +11,14 @@ GitHub (main) - https://github.com/Gregory-K/Markdown-Here.Alt.Icon
 GitLab (alt.) - https://gitlab.com/Gregory.K/Markdown-Here.Alt.Icon
 
 Version:  
-**3.4.5.1**  
+**3.5.1.1**  
 Compatibility:  
-91.0 <= Thunderbird version >= 113.0
+91.0 <= Thunderbird version <= 121.0
+
+**The icons of the present 'fork'** have been **accepted** to replace  
+the **official** extension's ones from the **future version 4 and up!**  
+**Thanks** for the appreciation **Rob Lemley**.  
+_Till then ... 3.xxx alt.icon releases will be provided for anyone that "needs" these icons now._
 
 
 ## Install / Update
